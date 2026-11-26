@@ -1,0 +1,53 @@
+let shake = 0, hitStop = 0;
+
+function triggerSwing() {
+  if (!isUserBatting() || g.swingAnim > 0) return;
+  g.swingAnim = 1; tone(190, 'triangle', 0.12); if (!g.pitch || g.pitch.swung) return; g.pitch.swung = true;
+  const p = g.pitch, batB = { bat_wood: 0, bat_alum: 0.01, bat_gold: 0.018, bat_neon: 0.022, bat_bolt: 0.028 }[save.equipped.bats] || 0;
+  const perfWin = 0.075 + batB + (g.abilityActive === 'ab_fire' ? 0.05 : 0), diff = p.t - 0.92, absDiff = Math.abs(diff);
+  const pciRadius = 28 + batB * 350 + (g.abilityActive === 'ab_fire' ? 14 : 0);
+  const pciDist = Math.hypot(p.tx - pci.x, p.ty - pci.y);
+
+  if (!p.isStrike) return finishSwing('strike', 0, 'CHASED A BAD PITCH!');
+  if (pciDist > pciRadius) return finishSwing('strike', 0, 'MISSED WITH PCI!');
+
+  if (absDiff <= perfWin && pciDist <= pciRadius * 0.65 || (absDiff <= 0.16 && g.abilityActive === 'ab_magnet')) {
+    shake = 15; hitStop = 6; tone(580, 'square', 0.35, 0.25); launchBall(true);
+    finishSwing('hit', 4, `💥 PERFECT BARREL! ${Math.floor(410 + Math.random() * 90)} FT!`);
+  } else if (absDiff <= 0.165 && g.mode !== 'derby') {
+    const bh = Math.random() < 0.35 ? 2 : 1; shake = 6; hitStop = 3; tone(360, 'triangle', 0.2); launchBall(false);
+    finishSwing('hit', bh, bh === 2 ? '🔥 GAP DOUBLE!' : '⚾ BASE HIT!');
+  } else finishSwing('strike', 0, diff < 0 ? 'TOO EARLY!' : 'TOO LATE!');
+}
+function finishSwing(o, b, m) { if (isOnlineMode() && conn) conn.send({ type: 'result', outcome: o, basesHit: b, msg: m }); applyTurnResult(o, b, m); }
+
+function applyTurnResult(o, bh, msg) {
+  g.pitch = null;
+  if (g.mode === 'derby') {
+    if (o === 'hit' && bh === 4) { g.p1Score++; save.coins += 15; save.xp += 15; persist(); showBanner(`${msg} (+15 💰)`, '#10b981'); }
+    else { g.outs++; tone(130, 'sawtooth', 0.2); showBanner(`${msg} (${10 - g.outs} LEFT)`, '#ef4444'); }
+    updateGameHUD(); return g.outs >= 10 ? endMatch() : setTimeout(setupTurn, 1100);
+  }
+  if (o === 'hit') {
+    g.balls = 0; g.strikes = 0; let runs = 0, nb = [false, false, false];
+    for (let i = 2; i >= 0; i--) if (g.bases[i]) { if (i + bh >= 3) runs++; else nb[i + bh] = true; }
+    if (bh >= 4) runs++; else nb[bh - 1] = true; g.bases = nb;
+    if (g.half === 'TOP') g.p1Score += runs; else g.p2Score += runs;
+    if (isUserBatting()) { save.coins += bh === 4 ? 25 : 8; save.xp += bh === 4 ? 25 : 10; persist(); }
+    showBanner(msg, bh === 4 ? '#10b981' : '#fbbf24'); updateGameHUD(); setTimeout(setupTurn, 1200);
+  } else if (o === 'strike') {
+    g.strikes++; tone(130, 'sawtooth', 0.2);
+    if (g.strikes >= 3) { showBanner('⚾ STRIKEOUT!', '#ef4444'); if (!isUserBatting()) { save.coins += 10; save.xp += 15; persist(); } recordOut(); }
+    else { showBanner(`${msg} (${g.balls}-${g.strikes})`, '#f87171'); updateGameHUD(); setTimeout(setupTurn, 950); }
+  } else { g.balls++; if (g.balls >= 4) { showBanner('🚶 WALK!', '#60a5fa'); applyTurnResult('hit', 1, 'WALK'); } else { showBanner(`BALL (${g.balls}-${g.strikes})`, '#93c5fd'); updateGameHUD(); setTimeout(setupTurn, 950); } }
+}
+
+function recordOut() {
+  g.balls = 0; g.strikes = 0; g.outs++;
+  if (g.outs >= 3) {
+    g.outs = 0; g.bases = [false, false, false]; g.abilityUsedThisInning = false;
+    if (g.half === 'TOP') { g.half = 'BOT'; showBanner('🔄 SWITCH SIDES!', '#fbbf24'); }
+    else { if (g.inning >= 3 && g.p1Score !== g.p2Score) return endMatch(); g.inning++; g.half = 'TOP'; showBanner(`⚾ INNING ${g.inning}!`, '#fbbf24'); }
+  }
+  updateGameHUD(); setTimeout(setupTurn, 1250);
+}
