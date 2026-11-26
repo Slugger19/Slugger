@@ -74,3 +74,23 @@ function redeemCode() {
   if (!v[c] || save.codes.includes(c)) return showModal('CODE ERROR', 'Invalid or already used.');
   save.codes.push(c); save.coins += v[c]; persist(); showModal('REDEEMED!', `+${v[c]} Coins!`);
 }
+const BOT_LB = [
+  ['KING_DINGER', 1420], ['YARD_GOAT', 1290], ['BOMB_SQUAD', 1180], ['VELO_99', 1095], ['MOONSHOT_X', 1020],
+  ['ACE_SLIDER', 940], ['BARREL_GOD', 880], ['WALKOFF_KID', 810], ['CLUTCH_24', 750], ['GRAND_SLAM', 690],
+  ['NITRO_BAT', 630], ['CURVE_KING', 580], ['HEATER_105', 520], ['SLUG_FEST', 470], ['DIAMOND_J', 420],
+  ['FASTBALL_Z', 375], ['PINPOINT_P', 330], ['RALLY_CAP', 290], ['SOUTHPAW', 250], ['CLEANUP_4', 210],
+  ['TRIPLE_ALLEY', 175], ['BUNT_CHEESE', 140], ['ROOKIE_STAR', 105], ['DUGOUT_DAN', 70], ['BAT_BOY', 35]
+];
+
+function openLeaderboard() {
+  showScreen('lb');
+  const all = [...BOT_LB.map(([n, rp]) => ({ n, rp, me: false })), { n: save.name + ' (YOU)', rp: save.rp, me: true }];
+  all.sort((a, b) => b.rp - a.rp);
+  const list = document.getElementById('lb-list'); list.innerHTML = '';
+  all.slice(0, 25).forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'tier-row' + (p.me ? ' unlocked' : '');
+    row.innerHTML = `<div><b>#${i + 1}</b></div><div><b>${p.n}</b></div><div style="text-align:right;color:#f472b6;"><b>${p.rp} RP</b> (${getRankName(p.rp)})</div>`;
+    list.appendChild(row);
+  });
+}
