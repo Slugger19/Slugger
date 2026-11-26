@@ -1,7 +1,7 @@
 function endMatch() {
   g.active = false;
   if (g.mode === 'derby') { const b = g.p1Score * 10; save.coins += b; save.xp += g.p1Score * 15; persist(); showScreen('menu'); return showModal('🔥 DERBY OVER!', `${g.p1Score} HRs (+${b} 💰)`); }
-  const won = isOnlineMode() ? (isHost ? g.p1Score > g.p2Score : g.p2Score > g.p1Score) : g.p1Score > g.p2Score;
+  const won = g.p1Score > g.p2Score;
   let rpTxt = '';
   if (isRankedMode()) { const d = won ? 25 : -12; save.rp = Math.max(0, save.rp + d); rpTxt = `\nRP: ${d > 0 ? '+' + d : d} (${getRankName(save.rp)})`; }
   save.coins += won ? 60 : 15; save.xp += won ? 60 : 20; persist(); leaveToMenu();
