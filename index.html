@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>DINGER SHOWDOWN ⚾</title>
+  <title>SLUGGER ⚾</title>
   <script src="https://unpkg.com"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
@@ -366,7 +366,6 @@ HOME RUN!
 REWARD!
 AWESOME
 
-/* ================= SAVE DATA & ITEMS ================= */
 const ITEMS = {
 bats: [
 { id: 'bat_wood', name: 'Classic Wood', color: '#d97706', trail: null, perk: 'Standard swing zone', price: 0 },
@@ -414,6 +413,8 @@ codes: [],
 owned: ['bat_wood', 'hat_none', 'drip_none', 'jer_blue', 'ab_none'],
 equipped: { bats: 'bat_wood', hats: 'hat_none', drip: 'drip_none', jerseys: 'jer_blue', abilities: 'ab_none' }
 };
+let peer = null, conn = null, isHost = false, friendEquip = null, queueTimer = null;
+let g = { active: false };
 function getRankName(rp) {
 if (rp >= 1000) return 'HALL OF FAME';
 if (rp >= 600) return 'DIAMOND';
@@ -422,12 +423,13 @@ if (rp >= 150) return 'SILVER';
 if (rp >= 50) return 'BRONZE';
 return 'ROOKIE';
 }
+function getItem(cat, id) {
+const list = ITEMS[cat];
+return list.find(x => x.id === id) || list[0];
+}
 function persist() {
 localStorage.setItem('dinger_save_v2', JSON.stringify(save));
 updateTopBar();
-}
-function getItem(cat, id) {
-return ITEMS[cat].find(x => x.id === id) || ITEMS[cat];
 }
 function updateTopBar() {
 const lvl = Math.min(20, Math.floor(save.xp / 100) + 1);
@@ -440,7 +442,6 @@ const jer = getItem('jerseys', save.equipped.jerseys).name;
 const ab = getItem('abilities', save.equipped.abilities).name;
 document.getElementById('equipped-summary').textContent = ${bat} · ${jer} · ${ab};
 }
-updateTopBar();
 function showModal(title, msg) {
 document.getElementById('modal-title').textContent = title;
 document.getElementById('modal-msg').textContent = msg;
@@ -454,24 +455,25 @@ if (name === 'game') resizeCanvas();
 }
 function leaveToMenu() {
 clearTimeout(queueTimer);
-if (peer) { peer.destroy(); peer = null; conn = null; }
+if (peer) { try { peer.destroy(); } catch (e) {} peer = null; conn = null; }
 g.active = false;
 showScreen('menu');
 }
-/* ================= AUDIO ================= */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function tone(freq, type, dur, vol = 0.2) {
-if (audioCtx.state === 'suspended') audioCtx.resume();
-const o = audioCtx.createOscillator();
-const g = audioCtx.createGain();
+try {
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+if (!window._actx) window._actx = new AudioContextClass();
+if (window._actx.state === 'suspended') window._actx.resume();
+const o = window._actx.createOscillator();
+const gain = window._actx.createGain();
 o.type = type;
-o.frequency.setValueAtTime(freq, audioCtx.currentTime);
-g.gain.setValueAtTime(vol, audioCtx.currentTime);
-g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-o.connect(g); g.connect(audioCtx.destination);
-o.start(); o.stop(audioCtx.currentTime + dur);
+o.frequency.setValueAtTime(freq, window._actx.currentTime);
+gain.gain.setValueAtTime(vol, window._actx.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.001, window._actx.currentTime + dur);
+o.connect(gain); gain.connect(window._actx.destination);
+o.start(); o.stop(window._actx.currentTime + dur);
+} catch (e) {}
 }
-/* ================= LOCKER, SHOP, PACKS & SEASON PASS ================= */
 function openLocker(cat, tabBtn) {
 showScreen('locker');
 if (tabBtn) {
@@ -612,13 +614,14 @@ save.coins += valid[code];
 persist();
 showModal('🎁 CODE REDEEMED!', +${valid[code]} Coins added to your account!);
 }
-/* ================= RANKED QUEUE & FRIENDLY 1V1 (PEERJS) ================= */
-let peer = null, conn = null, isHost = false, friendEquip = null, queueTimer = null;
 function startRankedQueue() {
 showScreen('ranked');
 document.getElementById('q-rank').textContent = getRankName(save.rp);
 document.getElementById('ranked-status').textContent = 'Searching ranked matchmaking pool...';
-// Try joining public ranked slot 1, else host slot 1
+if (typeof Peer === 'undefined') {
+queueTimer = setTimeout(launchRankedRival, 1500);
+return;
+}
 peer = new Peer();
 peer.on('open', () => {
 const tryConn = peer.connect('dinger_ranked_lobby_1');
@@ -631,8 +634,7 @@ setupConn('ranked_online');
 });
 setTimeout(() => {
 if (!connected) {
-tryConn.close();
-peer.destroy();
+try { tryConn.close(); peer.destroy(); } catch (e) {}
 peer = new Peer('dinger_ranked_lobby_1');
 isHost = true;
 peer.on('connection', c => {
@@ -640,15 +642,17 @@ clearTimeout(queueTimer);
 conn = c;
 setupConn('ranked_online');
 });
-// Auto-match with a Ranked Rival CPU after 5 seconds if no real player is online
-queueTimer = setTimeout(launchRankedRival, 5000);
+queueTimer = setTimeout(launchRankedRival, 4500);
 }
 }, 1500);
+});
+peer.on('error', () => {
+queueTimer = setTimeout(launchRankedRival, 1000);
 });
 }
 function launchRankedRival() {
 clearTimeout(queueTimer);
-if (peer) { peer.destroy(); peer = null; conn = null; }
+if (peer) { try { peer.destroy(); } catch (e) {} peer = null; conn = null; }
 const rivals = [
 { name: 'RIVAL ACE', equip: { jerseys: 'jer_red', hats: 'hat_red', drip: 'drip_shades', bats: 'bat_alum' } },
 { name: 'RIVAL SLUGGER', equip: { jerseys: 'jer_black', hats: 'hat_black', drip: 'drip_chain', bats: 'bat_gold' } },
@@ -659,6 +663,7 @@ friendEquip = pick.equip;
 startMatch('ranked_bot', pick.name);
 }
 function hostFriendly() {
+if (typeof Peer === 'undefined') return showModal('OFFLINE', 'Multiplayer requires an internet connection.');
 const code = Math.random().toString(36).substring(2, 6).toUpperCase();
 document.getElementById('host-status').textContent = CODE: ${code} (Waiting for friend...);
 isHost = true;
@@ -669,6 +674,7 @@ setupConn('friendly_online');
 });
 }
 function joinFriendly() {
+if (typeof Peer === 'undefined') return showModal('OFFLINE', 'Multiplayer requires an internet connection.');
 const code = document.getElementById('join-code').value.trim().toUpperCase();
 if (code.length !== 4) return;
 document.getElementById('join-status').textContent = 'Connecting to friend...';
@@ -690,15 +696,13 @@ if (data.type === 'pitch') receiveOnlinePitch(data.pitch);
 if (data.type === 'result') applyTurnResult(data.outcome, data.basesHit, data.msg);
 });
 }
-/* ================= GAMEPLAY ENGINE ================= */
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const controls = document.getElementById('game-controls');
 const banner = document.getElementById('banner');
-let g = {};
 function resizeCanvas() {
-canvas.width = canvas.parentElement.clientWidth;
-canvas.height = canvas.parentElement.clientHeight;
+canvas.width = canvas.parentElement.clientWidth || window.innerWidth;
+canvas.height = canvas.parentElement.clientHeight || window.innerHeight;
 }
 window.addEventListener('resize', resizeCanvas);
 function showBanner(txt, clr = '#fbbf24') {
@@ -711,7 +715,7 @@ banner._t = setTimeout(() => banner.style.opacity = '0', 1300);
 function startMatch(mode, oppName = 'CPU') {
 showScreen('game');
 g = {
-mode, // 'ranked_bot', 'ranked_online', 'friendly_online', 'derby'
+mode,
 oppName,
 active: true,
 inning: 1,
@@ -731,12 +735,8 @@ abilityActive: null
 updateGameHUD();
 setupTurn();
 }
-function isOnlineMode() {
-return g.mode === 'ranked_online' || g.mode === 'friendly_online';
-}
-function isRankedMode() {
-return g.mode === 'ranked_bot' || g.mode === 'ranked_online';
-}
+function isOnlineMode() { return g.mode === 'ranked_online' || g.mode === 'friendly_online'; }
+function isRankedMode() { return g.mode === 'ranked_bot' || g.mode === 'ranked_online'; }
 function isUserBatting() {
 if (g.mode === 'derby') return true;
 if (!isOnlineMode()) return g.half === 'TOP';
@@ -783,11 +783,8 @@ if (g.pitch && myAbility.id === 'ab_freeze') g.pitch.speed *= 0.65;
 };
 controls.appendChild(abBtn);
 }
-if (!isOnlineMode()) {
-setTimeout(throwCpuPitch, 1000);
-} else {
-showBanner('WAITING FOR OPPONENT PITCH...', '#93c5fd');
-}
+if (!isOnlineMode()) setTimeout(throwCpuPitch, 1000);
+else showBanner('WAITING FOR OPPONENT PITCH...', '#93c5fd');
 } else {
 const pitches = [
 { name: '🔥 FASTBALL', speed: 0.021, curve: 0 },
@@ -999,7 +996,6 @@ e.preventDefault();
 triggerSwing();
 }
 });
-/* ================= 2.5D RENDER LOOP WITH DRIP ================= */
 function drawPlayer(x, y, scale, equip, swingAngle = 0) {
 const jer = getItem('jerseys', equip.jerseys);
 const hat = getItem('hats', equip.hats);
@@ -1125,4 +1121,5 @@ ctx.fill();
 }
 requestAnimationFrame(loop);
 }
+updateTopBar();
 loop();
