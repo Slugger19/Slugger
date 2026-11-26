@@ -1,68 +1,80 @@
-const canvas = document.getElementById('c'), ctx = canvas.getContext('2d'), controls = document.getElementById('game-controls'), banner = document.getElementById('banner');
-let pci = { x: 0, y: 0 }, keys = {};
+window.oppInfo = { name: 'RIVAL', rp: 0, lbRank: null, isBot: true };
 
-function tone(f, t, d, v = 0.2) { try { const AC = window.AudioContext || window.webkitAudioContext; if (!window._ac) window._ac = new AC(); if (window._ac.state === 'suspended') window._ac.resume(); const o = window._ac.createOscillator(), gn = window._ac.createGain(); o.type = t; o.frequency.setValueAtTime(f, window._ac.currentTime); gn.gain.setValueAtTime(v, window._ac.currentTime); gn.gain.exponentialRampToValueAtTime(0.001, window._ac.currentTime + d); o.connect(gn); gn.connect(window._ac.destination); o.start(); o.stop(window._ac.currentTime + d); } catch (e) {} }
-function resizeCanvas() { canvas.width = canvas.parentElement.clientWidth || window.innerWidth; canvas.height = canvas.parentElement.clientHeight || window.innerHeight; }
-window.addEventListener('resize', resizeCanvas);
-function showBanner(txt, clr = '#fbbf24') { banner.textContent = txt; banner.style.color = clr; banner.style.opacity = '1'; clearTimeout(banner._t); banner._t = setTimeout(() => banner.style.opacity = '0', 1300); }
+function startRankedQueue() {
+  showScreen('ranked');
+  let sec = 15;
+  document.getElementById('q-rank').textContent = getRankName(save.rp);
+  document.getElementById('ranked-status').textContent = `Searching for real opponent... (${sec}s until Ranked Rival)`;
+  clearInterval(window.queueInt); clearTimeout(queueTimer);
+  window.queueInt = setInterval(() => {
+    sec--;
+    if (sec > 0) document.getElementById('ranked-status').textContent = `Searching for real opponent... (${sec}s until Ranked Rival)`;
+  }, 1000);
 
-function movePCI(clientX, clientY) {
-  const r = canvas.getBoundingClientRect();
-  pci.x = Math.max(-54, Math.min(54, (clientX - r.left) - canvas.width * 0.5));
-  pci.y = Math.max(-58, Math.min(58, (clientY - r.top) - canvas.height * 0.66));
-}
-canvas.addEventListener('pointermove', e => { if (isUserBatting()) movePCI(e.clientX, e.clientY); });
-canvas.addEventListener('pointerdown', e => { if (isUserBatting()) movePCI(e.clientX, e.clientY); });
-window.addEventListener('keydown', e => { keys[e.code] = true; });
-window.addEventListener('keyup', e => { keys[e.code] = false; });
-
-function startMatch(mode, oppName = 'CPU') {
-  showScreen('game'); pci = { x: 0, y: 0 };
-  g = { mode, oppName, active: true, inning: 1, half: 'TOP', outs: 0, balls: 0, strikes: 0, p1Score: 0, p2Score: 0, bases: [false, false, false], pitch: null, hitBall: null, swingAnim: 0, abilityUsedThisInning: false, abilityActive: null };
-  updateGameHUD(); setupTurn();
-}
-function isOnlineMode() { return g.mode === 'ranked_online' || g.mode === 'friendly_online'; }
-function isRankedMode() { return g.mode === 'ranked_bot' || g.mode === 'ranked_online'; }
-function isUserBatting() { return g.mode === 'derby' ? true : !isOnlineMode() ? g.half === 'TOP' : (isHost && g.half === 'TOP') || (!isHost && g.half === 'BOT'); }
-
-function updateGameHUD() {
-  if (g.mode === 'derby') { document.getElementById('hud-inning').textContent = `DERBY · ${10 - g.outs} OUTS LEFT`; document.getElementById('hud-score').textContent = `${save.name}: ${g.p1Score} HRs`; document.getElementById('hud-count').textContent = `OUTS: ${g.outs}/10`; }
-  else { document.getElementById('hud-inning').textContent = `${isRankedMode() ? '🏆 ' : '🤝 '}${g.half} ${g.inning}`; document.getElementById('hud-score').textContent = `${isOnlineMode() ? 'HOST' : save.name} ${g.p1Score} - ${g.p2Score} ${isOnlineMode() ? friendName : g.oppName}`; document.getElementById('hud-count').textContent = `${g.balls}-${g.strikes} | ${g.outs} OUT`; }
-  ['b1', 'b2', 'b3'].forEach((id, i) => document.getElementById(id).classList.toggle('on', g.bases[i]));
-}
-
-function setupTurn() {
-  controls.innerHTML = ''; g.pitch = null; g.hitBall = null; g.abilityActive = null; if (!g.active) return;
-  const ab = getItem('abilities', save.equipped.abilities);
-  if (isUserBatting()) {
-    const sw = document.createElement('button'); sw.id = 'swing-btn'; sw.textContent = 'AIM PCI + SWING'; sw.onpointerdown = () => triggerSwing(); controls.appendChild(sw);
-    if (ab.id !== 'ab_none' && !g.abilityUsedThisInning && ['ab_fire', 'ab_freeze', 'ab_magnet'].includes(ab.id)) {
-      const b = document.createElement('button'); b.id = 'ability-btn'; b.textContent = `USE ${ab.name}`;
-      b.onclick = () => { g.abilityUsedThisInning = true; g.abilityActive = ab.id; b.disabled = true; showBanner(`${ab.name} ON!`, '#c084fc'); if (g.pitch && ab.id === 'ab_freeze') g.pitch.speed *= 0.65; };
-      controls.appendChild(b);
-    }
-    if (!isOnlineMode()) setTimeout(throwCpuPitch, 1000); else showBanner('WAITING FOR PITCH...', '#93c5fd');
-  } else {
-    [{ name: '🔥 FASTBALL', speed: 0.021, curve: 0 }, { name: '🌀 CURVE', speed: 0.015, curve: 52 }, { name: '⚡ SLIDER', speed: 0.018, curve: -46 }, { name: '🐢 CHANGE', speed: 0.013, curve: 14 }].forEach(p => {
-      const b = document.createElement('button'); b.className = 'pitch-btn'; b.textContent = p.name; b.onclick = () => throwUserPitch(p); controls.appendChild(b);
+  if (typeof Peer === 'undefined') { queueTimer = setTimeout(launchRankedRival, 15000); return; }
+  try {
+    peer = new Peer();
+    peer.on('open', () => {
+      const tc = peer.connect('dinger_ranked_lobby_1'); let ok = false;
+      tc.on('open', () => { ok = true; clearInterval(window.queueInt); conn = tc; isHost = false; setupConn('ranked_online'); });
+      setTimeout(() => {
+        if (!ok) {
+          try { tc.close(); peer.destroy(); } catch (e) {}
+          peer = new Peer('dinger_ranked_lobby_1'); isHost = true;
+          peer.on('connection', c => { clearTimeout(queueTimer); clearInterval(window.queueInt); conn = c; setupConn('ranked_online'); });
+          queueTimer = setTimeout(launchRankedRival, 13500);
+        }
+      }, 1500);
     });
-    if (ab.id === 'ab_gas' && !g.abilityUsedThisInning) {
-      const b = document.createElement('button'); b.id = 'ability-btn'; b.textContent = '⚡ 105 GAS';
-      b.onclick = () => { g.abilityUsedThisInning = true; b.disabled = true; throwUserPitch({ speed: 0.032, curve: 0 }); }; controls.appendChild(b);
-    }
-  }
+    peer.on('error', () => { queueTimer = setTimeout(launchRankedRival, 15000); });
+  } catch (e) { queueTimer = setTimeout(launchRankedRival, 15000); }
 }
 
-function throwCpuPitch() {
-  if (!g.active || !isUserBatting()) return;
-  const pick = [{ speed: 0.019, curve: 0 }, { speed: 0.014, curve: 48 }, { speed: 0.017, curve: -44 }][Math.floor(Math.random() * 3)];
-  const isS = g.mode === 'derby' ? true : Math.random() < 0.72;
-  const badSide = Math.random() > 0.5 ? 1 : -1;
-  g.pitch = { t: 0, speed: g.abilityActive === 'ab_freeze' ? pick.speed * 0.65 : pick.speed, curve: pick.curve, tx: isS ? (Math.random() * 76 - 38) : badSide * (78 + Math.random() * 25), ty: isS ? (Math.random() * 82 - 41) : (Math.random() > 0.5 ? 82 : -82), isStrike: isS, swung: false };
+function launchRankedRival() {
+  clearTimeout(queueTimer); clearInterval(window.queueInt);
+  if (peer) { try { peer.destroy(); } catch (e) {} peer = null; conn = null; }
+  const rivals = [
+    { name: 'RIVAL ACE', rp: 40, equip: { jerseys: 'jer_red', hats: 'hat_red', drip: 'drip_shades', bats: 'bat_alum' } },
+    { name: 'RIVAL SLUGGER', rp: 280, equip: { jerseys: 'jer_black', hats: 'hat_black', drip: 'drip_chain', bats: 'bat_gold' } },
+    { name: 'RIVAL DEMON', rp: 650, equip: { jerseys: 'jer_gold', hats: 'hat_crown', drip: 'drip_combo', bats: 'bat_bolt' } }
+  ];
+  const pick = rivals[Math.min(2, Math.floor(save.rp / 250))];
+  friendEquip = pick.equip;
+  window.oppInfo = { name: pick.name, rp: pick.rp, lbRank: null, isBot: true };
+  beginMatchFlow('ranked_bot', pick.name);
 }
-function throwUserPitch(p) {
-  if (g.pitch) return; controls.innerHTML = ''; const isS = Math.random() < 0.78;
-  g.pitch = { t: 0, speed: p.speed, curve: p.curve, tx: isS ? (Math.random() * 70 - 35) : 85, ty: isS ? (Math.random() * 75 - 37) : 78, isStrike: isS, swung: false };
-  if (isOnlineMode() && conn) conn.send({ type: 'pitch', pitch: g.pitch });
+
+function hostFriendly() {
+  if (typeof Peer === 'undefined') return;
+  const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+  document.getElementById('host-status').textContent = `CODE: ${code} (Waiting...)`;
+  isHost = true; peer = new Peer('dinger_friend_' + code);
+  peer.on('connection', c => { conn = c; setupConn('friendly_online'); });
 }
-function receiveOnlinePitch(p) { g.pitch = { ...p, t: 0, swung: false }; if (g.abilityActive === 'ab_freeze') g.pitch.speed *= 0.65; }
+
+function joinFriendly() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (code.length !== 4 || typeof Peer === 'undefined') return;
+  document.getElementById('join-status').textContent = 'Connecting...';
+  isHost = false; peer = new Peer();
+  peer.on('open', () => { conn = peer.connect('dinger_friend_' + code); setupConn('friendly_online'); });
+}
+
+function setupConn(mode) {
+  conn.on('open', () => {
+    const coinFlipHostBatsFirst = Math.random() < 0.5;
+    conn.send({ type: 'hello', equipped: save.equipped, name: save.name, rp: save.rp, lbRank: getTop25Rank(save.playerId), hostBatsFirst: coinFlipHostBatsFirst });
+    if (isHost) window.coinHostBatsFirst = coinFlipHostBatsFirst;
+    beginMatchFlow(mode, 'PLAYER');
+  });
+  conn.on('data', d => {
+    if (d.type === 'hello') {
+      friendEquip = d.equipped;
+      window.oppInfo = { name: d.name || 'PLAYER', rp: d.rp || 0, lbRank: d.lbRank || null, isBot: false };
+      if (!isHost && typeof d.hostBatsFirst === 'boolean') window.coinHostBatsFirst = d.hostBatsFirst;
+      renderVSCards();
+    }
+    if (d.type === 'pitch') receiveOnlinePitch(d.pitch);
+    if (d.type === 'result') applyTurnResult(d.outcome, d.basesHit, d.msg);
+  });
+}
