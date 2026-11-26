@@ -1,25 +1,33 @@
 function startRankedQueue() {
   showScreen('ranked');
+  let sec = 15;
   document.getElementById('q-rank').textContent = getRankName(save.rp);
-  if (typeof Peer === 'undefined') { queueTimer = setTimeout(launchRankedRival, 1500); return; }
+  document.getElementById('ranked-status').textContent = `Searching for real opponent... (${sec}s until Ranked Rival)`;
+  clearInterval(queueInt); clearTimeout(queueTimer);
+  queueInt = setInterval(() => {
+    sec--;
+    if (sec > 0) document.getElementById('ranked-status').textContent = `Searching for real opponent... (${sec}s until Ranked Rival)`;
+  }, 1000);
+
+  if (typeof Peer === 'undefined') { queueTimer = setTimeout(launchRankedRival, 15000); return; }
   peer = new Peer();
   peer.on('open', () => {
     const tc = peer.connect('dinger_ranked_lobby_1'); let ok = false;
-    tc.on('open', () => { ok = true; conn = tc; isHost = false; setupConn('ranked_online'); });
+    tc.on('open', () => { ok = true; clearInterval(queueInt); conn = tc; isHost = false; setupConn('ranked_online'); });
     setTimeout(() => {
       if (!ok) {
         try { tc.close(); peer.destroy(); } catch (e) {}
         peer = new Peer('dinger_ranked_lobby_1'); isHost = true;
-        peer.on('connection', c => { clearTimeout(queueTimer); conn = c; setupConn('ranked_online'); });
-        queueTimer = setTimeout(launchRankedRival, 4500);
+        peer.on('connection', c => { clearTimeout(queueTimer); clearInterval(queueInt); conn = c; setupConn('ranked_online'); });
+        queueTimer = setTimeout(launchRankedRival, 13500);
       }
     }, 1500);
   });
-  peer.on('error', () => { queueTimer = setTimeout(launchRankedRival, 1000); });
+  peer.on('error', () => { queueTimer = setTimeout(launchRankedRival, 15000); });
 }
 
 function launchRankedRival() {
-  clearTimeout(queueTimer);
+  clearTimeout(queueTimer); clearInterval(queueInt);
   if (peer) { try { peer.destroy(); } catch (e) {} peer = null; conn = null; }
   const rivals = [
     { name: 'RIVAL ACE', equip: { jerseys: 'jer_red', hats: 'hat_red', drip: 'drip_shades', bats: 'bat_alum' } },
@@ -27,7 +35,7 @@ function launchRankedRival() {
     { name: 'RIVAL DEMON', equip: { jerseys: 'jer_gold', hats: 'hat_crown', drip: 'drip_combo', bats: 'bat_bolt' } }
   ];
   const pick = rivals[Math.min(2, Math.floor(save.rp / 250))];
-  friendEquip = pick.equip; startMatch('ranked_bot', pick.name);
+  friendEquip = pick.equip; friendName = pick.name; startMatch('ranked_bot', pick.name);
 }
 
 function hostFriendly() {
@@ -47,9 +55,9 @@ function joinFriendly() {
 }
 
 function setupConn(mode) {
-  conn.on('open', () => { conn.send({ type: 'hello', equipped: save.equipped }); startMatch(mode, 'FRIEND'); });
+  conn.on('open', () => { conn.send({ type: 'hello', equipped: save.equipped, name: save.name }); startMatch(mode, friendName); });
   conn.on('data', d => {
-    if (d.type === 'hello') friendEquip = d.equipped;
+    if (d.type === 'hello') { friendEquip = d.equipped; friendName = d.name || 'FRIEND'; updateGameHUD(); }
     if (d.type === 'pitch') receiveOnlinePitch(d.pitch);
     if (d.type === 'result') applyTurnResult(d.outcome, d.basesHit, d.msg);
   });
