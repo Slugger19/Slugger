@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>DINGER SHOWDOWN ⚾</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=5" />
   <script src="https://unpkg.com"></script>
 </head>
 <body>
@@ -23,11 +23,11 @@
       <div class="pill-group">
         <button class="btn-pink" onclick="startRankedQueue()">🏆 RANKED 1V1</button>
         <button class="btn-blue" onclick="showScreen('friendly')">🤝 FRIENDLY 1V1</button>
-        <button class="btn-gold" onclick="startMatch('derby')">🔥 HR DERBY</button>
+        <button class="btn-gold" onclick="beginMatchFlow('derby','TARGET')">🔥 HR DERBY</button>
       </div>
     </div>
     <div class="grid-2">
-      <div class="card"><h3>🏆 RANKED & TOP 25</h3><p>Climb the ladder & view the Top 25 RP Leaderboard.</p><div class="pill-group"><button class="btn-pink" style="flex:1;" onclick="startRankedQueue()">PLAY RANKED</button><button class="btn-dark" style="flex:1;" onclick="openLeaderboard()">📊 TOP 25</button></div></div>
+      <div class="card"><h3>🏆 RANKED & TOP 25</h3><p>Climb the ladder & view the Real Players Top 25 Leaderboard.</p><div class="pill-group"><button class="btn-pink" style="flex:1;" onclick="startRankedQueue()">PLAY RANKED</button><button class="btn-dark" style="flex:1;" onclick="openLeaderboard()">📊 TOP 25</button></div></div>
       <div class="card"><h3>🤝 FRIENDLY 1V1</h3><p>Unranked private 4-letter room code match.</p><button class="btn-blue" onclick="showScreen('friendly')">FRIENDLY LOBBY</button></div>
       <div class="card"><h3>🎟 SEASON PASS</h3><p>20 Tiers of Coins, Abilities & Tier 20 Royal Crown.</p><button class="btn-purple" onclick="openSeason()">SEASON PASS</button></div>
       <div class="card"><h3>🎒 LOCKER & 🛍 SHOP</h3><p>Equip Bats, Drip, Abilities & open Card Packs.</p><div class="pill-group"><button class="btn-dark" style="flex:1;" onclick="openLocker('bats')">LOCKER</button><button class="btn-gold" style="flex:1;" onclick="openShop()">SHOP</button></div></div>
@@ -37,21 +37,15 @@
       <div class="pill-group"><input id="code-input" placeholder="CODE" maxlength="10" /><button class="btn-green" onclick="redeemCode()">REDEEM</button></div>
     </div>
   </div>
-  <div id="screen-ranked" class="screen"><div class="card" style="text-align:center;padding:30px;align-items:center;"><h2 style="color:#f472b6;">🏆 RANKED MATCHMAKING</h2><p id="ranked-status">Searching for players near <b id="q-rank">ROOKIE</b> (15s)...</p><div class="pill-group"><button class="btn-pink" onclick="launchRankedRival()">⚡ PLAY RIVAL NOW</button><button class="btn-dark" onclick="leaveToMenu()">CANCEL</button></div></div></div>
-  <div id="screen-lb" class="screen"><h2>📊 TOP 25 RANKED LEADERBOARD</h2><div id="lb-list" class="tier-list"></div></div>
+  <div id="screen-ranked" class="screen"><div class="card" style="text-align:center;padding:30px;align-items:center;"><h2 style="color:#f472b6;">🏆 RANKED QUEUE</h2><p id="ranked-status">Searching near <b id="q-rank">ROOKIE</b> (15s)...</p><div class="pill-group"><button class="btn-pink" onclick="launchRankedRival()">⚡ PLAY RIVAL NOW</button><button class="btn-dark" onclick="leaveToMenu()">CANCEL</button></div></div></div>
+  <div id="screen-vs" class="screen"><div class="card" style="text-align:center;padding:28px;align-items:center;gap:16px;"><h2>⚔️ MATCHUP & COIN FLIP</h2><div id="vs-cards" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center;"></div><div id="coin-flip-box" style="font-size:20px;font-weight:900;color:#fbbf24;">🪙 FLIPPING COIN...</div></div></div>
+  <div id="screen-lb" class="screen"><h2>📊 TOP 25 LEADERBOARD (REAL PLAYERS ONLY)</h2><div id="lb-list" class="tier-list"></div></div>
   <div id="screen-friendly" class="screen"><h2>🤝 FRIENDLY 1V1 (UNRANKED)</h2><div class="grid-2"><div class="card"><h3>1. HOST</h3><button class="btn-green" onclick="hostFriendly()">GET CODE</button><div id="host-status" style="font-size:18px;font-weight:900;color:#fbbf24;"></div></div><div class="card"><h3>2. JOIN</h3><div class="pill-group"><input id="join-code" placeholder="ABCD" maxlength="4" /><button class="btn-blue" onclick="joinFriendly()">JOIN</button></div><div id="join-status"></div></div></div></div>
   <div id="screen-locker" class="screen"><h2>🎒 LOCKER & ABILITIES</h2><div class="tabs"><button class="tab active" onclick="openLocker('bats',this)">🏏 BATS</button><button class="tab" onclick="openLocker('hats',this)">🧢 HATS</button><button class="tab" onclick="openLocker('drip',this)">🕶 DRIP</button><button class="tab" onclick="openLocker('jerseys',this)">👕 JERSEYS</button><button class="tab" onclick="openLocker('abilities',this)">⚡ ABILITIES</button></div><div id="locker-grid" class="grid-3"></div></div>
   <div id="screen-shop" class="screen"><h2>🛍 SHOP & PACKS</h2><div class="grid-3"><div class="card"><h3>🥉 BRONZE PACK</h3><button class="btn-dark" onclick="buyPack('bronze',100)">100 💰</button></div><div class="card"><h3>🥈 SILVER PACK</h3><button class="btn-blue" onclick="buyPack('silver',250)">250 💰</button></div><div class="card"><h3>🥇 GOLD PACK</h3><button class="btn-gold" onclick="buyPack('gold',500)">500 💰</button></div></div><h3>🕒 DAILY ROTATION</h3><div id="daily-shop-grid" class="grid-3"></div></div>
   <div id="screen-season" class="screen"><div style="display:flex;justify-content:space-between;align-items:center;"><h2>🎟 SEASON 1 PASS (<span id="sp-lvl">1</span>/20)</h2><button id="vip-buy-btn" class="btn-gold" onclick="buyVIP()">VIP TRACK (600 💰)</button></div><div class="xp-bar-bg"><div id="sp-bar" class="xp-bar-fill"></div></div><div id="tier-list" class="tier-list"></div></div>
   <div id="screen-game" class="screen"><div id="game-hud"><div class="pill-group"><div class="pill" id="hud-inning">TOP 1</div><div class="pill" id="hud-score">YOU 0 - 0 OPP</div></div><div class="pill-group"><div id="diamond"><div class="base" id="b1"></div><div class="base" id="b2"></div><div class="base" id="b3"></div></div><div class="pill" id="hud-count">0-0 | 0 OUT</div></div></div><canvas id="c"></canvas><div id="banner">HOME RUN!</div><div id="game-controls"></div></div>
   <div id="modal"><div id="modal-box"><h2 id="modal-title">REWARD!</h2><p id="modal-msg"></p><button class="btn-green" onclick="closeModal()">AWESOME</button></div></div>
-  <script src="data.js"></script><script src="menus.js"></script><script src="online.js"></script><script src="engine.js"></script><script src="render.js"></script>
-</body>
-</html>
-  <script src="data.js?v=3"></script>
-  <script src="menus.js?v=3"></script>
-  <script src="online.js?v=3"></script>
-  <script src="engine.js?v=3"></script>
-  <script src="render.js?v=3"></script>
+  <script src="data.js?v=5"></script><script src="menus.js?v=5"></script><script src="online.js?v=5"></script><script src="engine.js?v=5"></script><script src="render.js?v=5"></script>
 </body>
 </html>
