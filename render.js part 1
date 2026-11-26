@@ -11,7 +11,7 @@ function triggerSwing() {
   if (!p.isStrike) return finishSwing('strike', 0, 'CHASED A BAD PITCH!');
   if (pciDist > pciRadius) return finishSwing('strike', 0, 'MISSED WITH PCI!');
 
-  if (absDiff <= perfWin && pciDist <= pciRadius * 0.65 || (absDiff <= 0.16 && g.abilityActive === 'ab_magnet')) {
+  if ((absDiff <= perfWin && pciDist <= pciRadius * 0.65) || (absDiff <= 0.16 && g.abilityActive === 'ab_magnet')) {
     shake = 15; hitStop = 6; tone(580, 'square', 0.35, 0.25); launchBall(true);
     finishSwing('hit', 4, `💥 PERFECT BARREL! ${Math.floor(410 + Math.random() * 90)} FT!`);
   } else if (absDiff <= 0.165 && g.mode !== 'derby') {
@@ -32,7 +32,7 @@ function applyTurnResult(o, bh, msg) {
     g.balls = 0; g.strikes = 0; let runs = 0, nb = [false, false, false];
     for (let i = 2; i >= 0; i--) if (g.bases[i]) { if (i + bh >= 3) runs++; else nb[i + bh] = true; }
     if (bh >= 4) runs++; else nb[bh - 1] = true; g.bases = nb;
-    if (g.half === 'TOP') g.p1Score += runs; else g.p2Score += runs;
+    if (isUserBatting()) g.p1Score += runs; else g.p2Score += runs;
     if (isUserBatting()) { save.coins += bh === 4 ? 25 : 8; save.xp += bh === 4 ? 25 : 10; persist(); }
     showBanner(msg, bh === 4 ? '#10b981' : '#fbbf24'); updateGameHUD(); setTimeout(setupTurn, 1200);
   } else if (o === 'strike') {
