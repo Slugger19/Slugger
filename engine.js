@@ -1,0 +1,55 @@
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d'), controls = document.getElementById('game-controls'), banner = document.getElementById('banner');
+function tone(f, t, d, v = 0.2) { try { const AC = window.AudioContext || window.webkitAudioContext; if (!window._ac) window._ac = new AC(); if (window._ac.state === 'suspended') window._ac.resume(); const o = window._ac.createOscillator(), gn = window._ac.createGain(); o.type = t; o.frequency.setValueAtTime(f, window._ac.currentTime); gn.gain.setValueAtTime(v, window._ac.currentTime); gn.gain.exponentialRampToValueAtTime(0.001, window._ac.currentTime + d); o.connect(gn); gn.connect(window._ac.destination); o.start(); o.stop(window._ac.currentTime + d); } catch (e) {} }
+function resizeCanvas() { canvas.width = canvas.parentElement.clientWidth || window.innerWidth; canvas.height = canvas.parentElement.clientHeight || window.innerHeight; }
+window.addEventListener('resize', resizeCanvas);
+function showBanner(txt, clr = '#fbbf24') { banner.textContent = txt; banner.style.color = clr; banner.style.opacity = '1'; clearTimeout(banner._t); banner._t = setTimeout(() => banner.style.opacity = '0', 1300); }
+
+function startMatch(mode, oppName = 'CPU') {
+  showScreen('game');
+  g = { mode, oppName, active: true, inning: 1, half: 'TOP', outs: 0, balls: 0, strikes: 0, p1Score: 0, p2Score: 0, bases: [false, false, false], pitch: null, hitBall: null, swingAnim: 0, abilityUsedThisInning: false, abilityActive: null };
+  updateGameHUD(); setupTurn();
+}
+function isOnlineMode() { return g.mode === 'ranked_online' || g.mode === 'friendly_online'; }
+function isRankedMode() { return g.mode === 'ranked_bot' || g.mode === 'ranked_online'; }
+function isUserBatting() { return g.mode === 'derby' ? true : !isOnlineMode() ? g.half === 'TOP' : (isHost && g.half === 'TOP') || (!isHost && g.half === 'BOT'); }
+
+function updateGameHUD() {
+  if (g.mode === 'derby') { document.getElementById('hud-inning').textContent = `DERBY · ${10 - g.outs} OUTS LEFT`; document.getElementById('hud-score').textContent = `HOME RUNS: ${g.p1Score}`; document.getElementById('hud-count').textContent = `OUTS: ${g.outs}/10`; }
+  else { document.getElementById('hud-inning').textContent = `${isRankedMode() ? '🏆 ' : '🤝 '}${g.half} ${g.inning}`; document.getElementById('hud-score').textContent = `${isOnlineMode() ? 'HOST' : 'YOU'} ${g.p1Score} - ${g.p2Score} ${isOnlineMode() ? 'GUEST' : g.oppName}`; document.getElementById('hud-count').textContent = `${g.balls}-${g.strikes} | ${g.outs} OUT`; }
+  ['b1', 'b2', 'b3'].forEach((id, i) => document.getElementById(id).classList.toggle('on', g.bases[i]));
+}
+
+function setupTurn() {
+  controls.innerHTML = ''; g.pitch = null; g.hitBall = null; g.abilityActive = null; if (!g.active) return;
+  const ab = getItem('abilities', save.equipped.abilities);
+  if (isUserBatting()) {
+    const sw = document.createElement('button'); sw.id = 'swing-btn'; sw.textContent = 'SWING (SPACE)'; sw.onpointerdown = () => triggerSwing(); controls.appendChild(sw);
+    if (ab.id !== 'ab_none' && !g.abilityUsedThisInning && ['ab_fire', 'ab_freeze', 'ab_magnet'].includes(ab.id)) {
+      const b = document.createElement('button'); b.id = 'ability-btn'; b.textContent = `USE ${ab.name}`;
+      b.onclick = () => { g.abilityUsedThisInning = true; g.abilityActive = ab.id; b.disabled = true; showBanner(`${ab.name} ON!`, '#c084fc'); if (g.pitch && ab.id === 'ab_freeze') g.pitch.speed *= 0.65; };
+      controls.appendChild(b);
+    }
+    if (!isOnlineMode()) setTimeout(throwCpuPitch, 1000); else showBanner('WAITING FOR PITCH...', '#93c5fd');
+  } else {
+    [{ name: '🔥 FASTBALL', speed: 0.021, curve: 0 }, { name: '🌀 CURVE', speed: 0.015, curve: 52 }, { name: '⚡ SLIDER', speed: 0.018, curve: -46 }, { name: '🐢 CHANGE', speed: 0.013, curve: 14 }].forEach(p => {
+      const b = document.createElement('button'); b.className = 'pitch-btn'; b.textContent = p.name; b.onclick = () => throwUserPitch(p); controls.appendChild(b);
+    });
+    if (ab.id === 'ab_gas' && !g.abilityUsedThisInning) {
+      const b = document.createElement('button'); b.id = 'ability-btn'; b.textContent = '⚡ 105 GAS';
+      b.onclick = () => { g.abilityUsedThisInning = true; b.disabled = true; throwUserPitch({ speed: 0.032, curve: 0 }); }; controls.appendChild(b);
+    }
+  }
+}
+
+function throwCpuPitch() {
+  if (!g.active || !isUserBatting()) return;
+  const pick = [{ speed: 0.019, curve: 0 }, { speed: 0.014, curve: 48 }, { speed: 0.017, curve: -44 }][Math.floor(Math.random() * 3)];
+  const isS = g.mode === 'derby' ? true : Math.random() < 0.76;
+  g.pitch = { t: 0, speed: g.abilityActive === 'ab_freeze' ? pick.speed * 0.65 : pick.speed, curve: pick.curve, tx: isS ? (Math.random() * 56 - 28) : 92, ty: isS ? (Math.random() * 46 - 23) : 72, isStrike: isS, swung: false };
+}
+function throwUserPitch(p) {
+  if (g.pitch) return; controls.innerHTML = ''; const isS = Math.random() < 0.8;
+  g.pitch = { t: 0, speed: p.speed, curve: p.curve, tx: isS ? (Math.random() * 52 - 26) : 88, ty: isS ? (Math.random() * 44 - 22) : 70, isStrike: isS, swung: false };
+  if (isOnlineMode() && conn) conn.send({ type: 'pitch', pitch: g.pitch });
+}
+function receiveOnlinePitch(p) { g.pitch = { ...p, t: 0, swung: false }; if (g.abilityActive === 'ab_freeze') g.pitch.speed *= 0.65; }
