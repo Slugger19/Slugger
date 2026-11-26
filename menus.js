@@ -74,23 +74,31 @@ function redeemCode() {
   if (!v[c] || save.codes.includes(c)) return showModal('CODE ERROR', 'Invalid or already used.');
   save.codes.push(c); save.coins += v[c]; persist(); showModal('REDEEMED!', `+${v[c]} Coins!`);
 }
-const BOT_LB = [
-  ['KING_DINGER', 1420], ['YARD_GOAT', 1290], ['BOMB_SQUAD', 1180], ['VELO_99', 1095], ['MOONSHOT_X', 1020],
-  ['ACE_SLIDER', 940], ['BARREL_GOD', 880], ['WALKOFF_KID', 810], ['CLUTCH_24', 750], ['GRAND_SLAM', 690],
-  ['NITRO_BAT', 630], ['CURVE_KING', 580], ['HEATER_105', 520], ['SLUG_FEST', 470], ['DIAMOND_J', 420],
-  ['FASTBALL_Z', 375], ['PINPOINT_P', 330], ['RALLY_CAP', 290], ['SOUTHPAW', 250], ['CLEANUP_4', 210],
-  ['TRIPLE_ALLEY', 175], ['BUNT_CHEESE', 140], ['ROOKIE_STAR', 105], ['DUGOUT_DAN', 70], ['BAT_BOY', 35]
-];
+
+function getRealLeaderboard() {
+  let lb = JSON.parse(localStorage.getItem('dinger_real_lb') || '[]');
+  const idx = lb.findIndex(p => p.id === save.playerId);
+  const entry = { id: save.playerId, n: save.name, rp: save.rp };
+  if (idx >= 0) lb[idx] = entry; else lb.push(entry);
+  lb.sort((a, b) => b.rp - a.rp); lb = lb.slice(0, 25);
+  localStorage.setItem('dinger_real_lb', JSON.stringify(lb));
+  return lb;
+}
+
+function getTop25Rank(playerId) {
+  const pos = getRealLeaderboard().findIndex(p => p.id === playerId);
+  return pos >= 0 ? pos + 1 : null;
+}
 
 function openLeaderboard() {
   showScreen('lb');
-  const all = [...BOT_LB.map(([n, rp]) => ({ n, rp, me: false })), { n: save.name + ' (YOU)', rp: save.rp, me: true }];
-  all.sort((a, b) => b.rp - a.rp);
-  const list = document.getElementById('lb-list'); list.innerHTML = '';
-  all.slice(0, 25).forEach((p, i) => {
-    const row = document.createElement('div');
-    row.className = 'tier-row' + (p.me ? ' unlocked' : '');
-    row.innerHTML = `<div><b>#${i + 1}</b></div><div><b>${p.n}</b></div><div style="text-align:right;color:#f472b6;"><b>${p.rp} RP</b> (${getRankName(p.rp)})</div>`;
+  const lb = getRealLeaderboard(), list = document.getElementById('lb-list'); list.innerHTML = '';
+  for (let i = 0; i < 25; i++) {
+    const p = lb[i], row = document.createElement('div');
+    row.className = 'tier-row' + (p && p.id === save.playerId ? ' unlocked' : '');
+    row.innerHTML = p
+      ? `<div><b>#${i + 1}</b></div><div><b>${p.n}${p.id === save.playerId ? ' (YOU)' : ''}</b></div><div style="text-align:right;color:#f472b6;"><b>${p.rp} RP</b> (${getRankName(p.rp)})</div>`
+      : `<div style="color:#4b5563;">#${i + 1}</div><div style="color:#4b5563;">— Empty Slot —</div><div style="text-align:right;color:#4b5563;">0 RP</div>`;
     list.appendChild(row);
-  });
+  }
 }
