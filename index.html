@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DINGER SHOWDOWN ⚾</title>
+  <script src="https://unpkg.com"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body {
+      background: #0b0f19;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+    #topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      background: #111827;
+      border-bottom: 2px solid #1f2937;
+      font-weight: 800;
+      font-size: 13px;
+      z-index: 30;
+    }
+    .pill-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .pill {
+      background: #1f2937;
+      border: 1px solid #374151;
+      padding: 5px 10px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .gold { color: #fbbf24; }
+    .xp-clr { color: #38bdf8; }
+    .rank-clr { color: #f472b6; }
+
+    .screen {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 14px;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .screen.active { display: flex; }
+
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a, #312e81);
+      border: 2px solid #3b82f6;
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .hero h1 { font-size: 26px; letter-spacing: 1px; color: #fbbf24; }
+    .hero p { font-size: 13px; color: #cbd5e1; margin-top: 4px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+
+    .card {
+      background: #111827;
+      border: 2px solid #1f2937;
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .card:hover { border-color: #3b82f6; }
+    .card h3 { font-size: 16px; display: flex; align-items: center; gap: 6px; }
+    .card p { font-size: 12px; color: #9ca3af; line-height: 1.4; }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: transform 0.08s, opacity 0.15s;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-green { background: #10b981; color: #052e16; }
+    .btn-blue { background: #3b82f6; color: #fff; }
+    .btn-gold { background: #f59e0b; color: #1c1917; }
+    .btn-purple { background: #8b5cf6; color: #fff; }
+    .btn-pink { background: #ec4899; color: #fff; }
+    .btn-dark { background: #1f2937; color: #e5e7eb; border: 1px solid #374151; }
+
+    input {
+      background: #1f2937;
+      border: 2px solid #374151;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 15px;
+      text-transform: uppercase;
+      width: 140px;
+      text-align: center;
+    }
+
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tab { background: #1f2937; color: #9ca3af; padding: 8px 14px; border-radius: 8px; font-size: 13px; }
+    .tab.active { background: #3b82f6; color: #fff; }
+
+    .xp-bar-bg { background: #1f2937; height: 14px; border-radius: 99px; overflow: hidden; border: 1px solid #374151; }
+    .xp-bar-fill { background: linear-gradient(90deg, #38bdf8, #818cf8); height: 100%; width: 0%; transition: width 0.3s; }
+    .tier-list { display: flex; flex-direction: column; gap: 8px; }
+    .tier-row {
+      display: grid;
+      grid-template-columns: 60px 1fr 1fr;
+      gap: 8px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      padding: 10px;
+      border-radius: 10px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .tier-row.unlocked { border-color: #10b981; }
+
+    /* GAMEPLAY VIEW */
+    #screen-game { padding: 0; max-width: 100%; position: relative; }
+    #game-hud {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 15;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    #diamond {
+      position: relative;
+      width: 30px;
+      height: 30px;
+      transform: rotate(45deg);
+      border: 2px solid rgba(255,255,255,0.5);
+      margin: 0 8px;
+    }
+    .base { position: absolute; width: 8px; height: 8px; background: #1f2937; border: 1px solid #fff; }
+    .base.on { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+    #b1 { top: -5px; right: -5px; }
+    #b2 { top: -5px; left: -5px; }
+    #b3 { bottom: -5px; left: -5px; }
+
+    canvas { width: 100%; height: 100%; display: block; }
+    #banner {
+      position: absolute;
+      top: 24%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      font-weight: 900;
+      text-shadow: 0 4px 14px rgba(0,0,0,0.9);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      text-align: center;
+      z-index: 20;
+    }
+    #game-controls {
+      position: absolute;
+      bottom: 18px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 0 12px;
+      z-index: 20;
+    }
+    #swing-btn { background: #ef4444; color: #fff; font-size: 20px; padding: 15px 42px; box-shadow: 0 4px 0 #991b1b; }
+    #ability-btn { background: #8b5cf6; color: #fff; font-size: 14px; padding: 14px 18px; box-shadow: 0 4px 0 #5b21b6; }
+    .pitch-btn { background: #2563eb; color: #fff; font-size: 13px; padding: 12px 14px; }
+
+    #modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      padding: 20px;
+    }
+    #modal-box {
+      background: #111827;
+      border: 2px solid #3b82f6;
+      border-radius: 16px;
+      padding: 22px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAVIGATION -->
+  <div id="topbar">
+    <div class="pill-group">
+      <button class="btn-dark" style="padding:5px 10px;font-size:12px;" onclick="leaveToMenu()">🏠 MENU</button>
+      <div class="pill rank-clr">🏆 <span id="top-rank">ROOKIE</span> (<span id="top-rp">0</span> RP)</div>
+      <div class="pill xp-clr">🎟 LVL <span id="top-lvl">1</span></div>
+    </div>
+    <div class="pill-group">
+      <div class="pill gold">💰 <span id="top-coins">250</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div id="screen-menu" class="screen active">
+    <div class="hero">
+      <div>
+        <h1>⚾ DINGER SHOWDOWN</h1>
+        <p>Loadout: <b id="equipped-summary" style="color:#fff;">Classic Wood · Electric Blue · No Ability</b></p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-pink" onclick="startRankedQueue()">🏆 RANKED 1V1</button>
+        <button class="btn-blue" onclick="showScreen('friendly')">🤝 FRIENDLY 1V1</button>
+        <button class="btn-gold" onclick="startMatch('derby')">🔥 HR DERBY</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>🏆 RANKED LADDER</h3>
+        <p>Climb from <b>Rookie</b> to <b>Hall of Fame</b>! Win matches for +25 RP & bonus Coins.</p>
+        <button class="btn-pink" onclick="startRankedQueue()">FIND RANKED MATCH</button>
+      </div>
+      <div class="card">
+        <h3>🤝 PLAY WITH FRIENDS (CODE)</h3>
+        <p>Create or enter a 4-letter room code for an unranked friendly 1v1 against a classmate.</p>
+        <button class="btn-blue" onclick="showScreen('friendly')">FRIENDLY 1V1 LOBBY</button>
+      </div>
+      <div class="card">
+        <h3>🎟 SEASON PASS (20 TIERS)</h3>
+        <p>Earn XP every match to unlock Coins, Packs, Special Abilities, and the Tier 20 Crown.</p>
+        <button class="btn-purple" onclick="openSeason()">OPEN SEASON PASS</button>
+      </div>
+      <div class="card">
+        <h3>🎒 LOCKER & 🛍 DAILY SHOP</h3>
+        <p>Equip Bats, Shades, Chains, Jerseys, Special Abilities, or rip Bronze/Silver/Gold Packs.</p>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-dark" style="flex:1;" onclick="openLocker('bats')">LOCKER</button>
+          <button class="btn-gold" style="flex:1;" onclick="openShop()">SHOP & PACKS</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+      <div>
+        <h3>🎁 REDEEM SECRET CODE</h3>
+        <p>Try codes: <b>LAUNCH</b>, <b>BUCKETS</b>, or <b>VIP2026</b></p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input id="code-input" placeholder="CODE" maxlength="10" />
+        <button class="btn-green" onclick="redeemCode()">REDEEM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RANKED QUEUE SCREEN -->
+  <div id="screen-ranked" class="screen">
+    <div class="card" style="text-align:center;padding:30px;align-items:center;">
+      <h2 style="color:#f472b6;">🏆 SEARCHING FOR RANKED 1V1...</h2>
+      <p id="ranked-status" style="font-size:14px;">Looking for online players near your Rank (<b id="q-rank">ROOKIE</b>)...</p>
+Use code with caution.
+⚡ PLAY RANKED RIVAL NOW
+CANCEL
+
+
+🤝 FRIENDLY 1V1 (PRIVATE ROOM CODE)
+Friendly games do not affect your Ranked RP.
+1. HOST FRIENDLY GAME
+Generate a 4-letter code and send it to your friend.
+GET ROOM CODE
+
+
+
+2. JOIN FRIENDLY GAME
+Enter your friend's 4-letter code below.
+JOIN
+
+
+
+
+🎒 YOUR LOCKER & ABILITIES
+
+🏏 BATS
+🧢 HEADGEAR
+🕶 SHADES & CHAINS
+👕 JERSEYS
+⚡ ABILITIES
+
+
+🛍 DAILY ITEM SHOP & CARD PACKS
+📦 OPEN PACKS
+
+
+🥉 BRONZE PACK
+Unlocks a random Common or Rare Drip item.
+BUY (100 💰)
+
+
+🥈 SILVER PACK
+High chance for Rare Drip or Special Abilities.
+BUY (250 💰)
+
+
+🥇 GOLD LEGEND PACK
+Guaranteed Legendary Bat, Crown, or Ability!
+BUY (500 💰)
+
+
+🕒 TODAY'S ROTATING DRIP
+
+🎟 SEASON 1: GRAND SLAM PASS
+Tier 1 / 20 · Earn 100 XP per tier by playing games!
+UNLOCK VIP TRACK (600 💰)
+
+
+
+TOP 1
+YOU 0 - 0 OPP
+
+
+
+
+
+
+
+0-0 | 0 OUT
+
+
+
+HOME RUN!
+
+REWARD!
+AWESOME
+
+/* ================= SAVE DATA & ITEMS ================= */
+const ITEMS = {
+bats: [
+{ id: 'bat_wood', name: 'Classic Wood', color: '#d97706', trail: null, perk: 'Standard swing zone', price: 0 },
+{ id: 'bat_alum', name: 'Pro Aluminum', color: '#94a3b8', trail: '#e2e8f0', perk: '+5% Perfect zone', price: 150 },
+{ id: 'bat_gold', name: '24K Gold Slugger', color: '#fbbf24', trail: '#fde047', perk: '+10% Perfect zone', price: 350 },
+{ id: 'bat_neon', name: 'Cyber Neon Bat', color: '#22d3ee', trail: '#06b6d4', perk: '+12% Perfect zone', price: 500 },
+{ id: 'bat_bolt', name: 'Lightning Fury', color: '#a855f7', trail: '#c084fc', perk: '+15% Perfect zone', price: 750 }
+],
+hats: [
+{ id: 'hat_none', name: 'No Cap', color: null, price: 0 },
+{ id: 'hat_red', name: 'Crimson Fitted', color: '#ef4444', price: 120 },
+{ id: 'hat_blue', name: 'Royal Helmet', color: '#2563eb', price: 180 },
+{ id: 'hat_black', name: 'Stealth Black Cap', color: '#1f2937', price: 250 },
+{ id: 'hat_crown', name: 'Tier 20 Royal Crown', color: '#fbbf24', price: 9999 }
+],
+drip: [
+{ id: 'drip_none', name: 'Clean Look', shades: false, chain: false, price: 0 },
+{ id: 'drip_shades', name: 'Pit Viper Shades', shades: true, chain: false, price: 200 },
+{ id: 'drip_chain', name: 'VVS Ice Chain', shades: false, chain: true, price: 300 },
+{ id: 'drip_combo', name: 'Vipers + Ice Chain', shades: true, chain: true, price: 550 }
+],
+jerseys: [
+{ id: 'jer_blue', name: 'Electric Blue', color: '#2563eb', price: 0 },
+{ id: 'jer_red', name: 'Heat Red', color: '#dc2626', price: 120 },
+{ id: 'jer_black', name: 'Midnight Blackout', color: '#18181b', price: 220 },
+{ id: 'jer_emerald', name: 'Money Green', color: '#059669', price: 280 },
+{ id: 'jer_gold', name: 'Championship Gold', color: '#d97706', price: 450 }
+],
+abilities: [
+{ id: 'ab_none', name: 'No Ability', desc: 'Pure skill mode.', price: 0 },
+{ id: 'ab_fire', name: '🔥 On Fire', desc: 'Doubles your green Perfect zone for 1 pitch!', price: 250 },
+{ id: 'ab_gas', name: '⚡ 105 MPH Gas', desc: 'Throws an unhittable blazing fastball when pitching!', price: 300 },
+{ id: 'ab_freeze', name: '❄️ Freeze Pitch', desc: 'Slows the incoming pitch by 35% so you can crush it!', price: 350 },
+{ id: 'ab_magnet', name: '🧲 Magnet Bat', desc: 'Turns any Good yellow hit into an automatic Home Run!', price: 450 }
+]
+};
+let save = JSON.parse(localStorage.getItem('dinger_save_v2') || 'null') || {
+coins: 250,
+xp: 0,
+rp: 0,
+vip: false,
+claimedFree: [],
+claimedVip: [],
+codes: [],
+owned: ['bat_wood', 'hat_none', 'drip_none', 'jer_blue', 'ab_none'],
+equipped: { bats: 'bat_wood', hats: 'hat_none', drip: 'drip_none', jerseys: 'jer_blue', abilities: 'ab_none' }
+};
+function getRankName(rp) {
+if (rp >= 1000) return 'HALL OF FAME';
+if (rp >= 600) return 'DIAMOND';
+if (rp >= 350) return 'GOLD';
+if (rp >= 150) return 'SILVER';
+if (rp >= 50) return 'BRONZE';
+return 'ROOKIE';
+}
+function persist() {
+localStorage.setItem('dinger_save_v2', JSON.stringify(save));
+updateTopBar();
+}
+function getItem(cat, id) {
+return ITEMS[cat].find(x => x.id === id) || ITEMS[cat];
+}
+function updateTopBar() {
+const lvl = Math.min(20, Math.floor(save.xp / 100) + 1);
+document.getElementById('top-coins').textContent = save.coins;
+document.getElementById('top-lvl').textContent = lvl;
+document.getElementById('top-rp').textContent = save.rp;
+document.getElementById('top-rank').textContent = getRankName(save.rp);
+const bat = getItem('bats', save.equipped.bats).name;
+const jer = getItem('jerseys', save.equipped.jerseys).name;
+const ab = getItem('abilities', save.equipped.abilities).name;
+document.getElementById('equipped-summary').textContent = ${bat} · ${jer} · ${ab};
+}
+updateTopBar();
+function showModal(title, msg) {
+document.getElementById('modal-title').textContent = title;
+document.getElementById('modal-msg').textContent = msg;
+document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+function showScreen(name) {
+document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+document.getElementById('screen-' + name).classList.add('active');
+if (name === 'game') resizeCanvas();
+}
+function leaveToMenu() {
+clearTimeout(queueTimer);
+if (peer) { peer.destroy(); peer = null; conn = null; }
+g.active = false;
+showScreen('menu');
+}
+/* ================= AUDIO ================= */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function tone(freq, type, dur, vol = 0.2) {
+if (audioCtx.state === 'suspended') audioCtx.resume();
+const o = audioCtx.createOscillator();
+const g = audioCtx.createGain();
+o.type = type;
+o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+g.gain.setValueAtTime(vol, audioCtx.currentTime);
+g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+o.connect(g); g.connect(audioCtx.destination);
+o.start(); o.stop(audioCtx.currentTime + dur);
+}
+/* ================= LOCKER, SHOP, PACKS & SEASON PASS ================= */
+function openLocker(cat, tabBtn) {
+showScreen('locker');
+if (tabBtn) {
+document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+tabBtn.classList.add('active');
+}
+const grid = document.getElementById('locker-grid');
+grid.innerHTML = '';
+ITEMS[cat].forEach(item => {
+const owned = save.owned.includes(item.id);
+const eq = save.equipped[cat] === item.id;
+const div = document.createElement('div');
+div.className = 'card';
+div.innerHTML = `
+${item.name}
+${item.perk || item.desc || (owned ? 'Unlocked in your Locker' : 'Unlock via Shop, Packs, or Season Pass')}
+${eq ? <button class="btn-green" disabled>EQUIPPED ✓</button> :
+owned ? <button class="btn-blue" onclick="equipItem('${cat}','${item.id}')">EQUIP</button> :
+<button class="btn-dark" disabled>LOCKED 🔒</button>}
+`;
+grid.appendChild(div);
+});
+}
+function equipItem(cat, id) {
+save.equipped[cat] = id;
+persist();
+openLocker(cat);
+}
+function openShop() {
+showScreen('shop');
+const grid = document.getElementById('daily-shop-grid');
+grid.innerHTML = '';
+const daySeed = Math.floor(Date.now() / 86400000);
+const pool = [
+...ITEMS.bats.slice(1).map(x => ({ ...x, cat: 'bats' })),
+...ITEMS.hats.slice(1, 4).map(x => ({ ...x, cat: 'hats' })),
+...ITEMS.drip.slice(1).map(x => ({ ...x, cat: 'drip' })),
+...ITEMS.jerseys.slice(1).map(x => ({ ...x, cat: 'jerseys' })),
+...ITEMS.abilities.slice(1).map(x => ({ ...x, cat: 'abilities' }))
+];
+for (let i = 0; i < 3; i++) {
+const item = pool[(daySeed + i * 3) % pool.length];
+const owned = save.owned.includes(item.id);
+const div = document.createElement('div');
+div.className = 'card';
+div.innerHTML = `
+${item.name}
+${item.perk || item.desc || 'Exclusive Daily Drip'}
+${owned ? <button class="btn-dark" disabled>OWNED ✓</button> :
+<button class="btn-gold" onclick="buyShopItem('${item.cat}','${item.id}',${item.price})">BUY (${item.price} 💰)</button>}
+`;
+grid.appendChild(div);
+}
+}
+function buyShopItem(cat, id, price) {
+if (save.coins < price) return showModal('NOT ENOUGH COINS', 'Play Ranked or Home Run Derby to earn coins!');
+save.coins -= price;
+save.owned.push(id);
+save.equipped[cat] = id;
+persist();
+showModal('DRIP UNLOCKED!', You bought and equipped ${getItem(cat, id).name}!);
+openShop();
+}
+function buyPack(tier, cost) {
+if (save.coins < cost) return showModal('NOT ENOUGH COINS', You need ${cost} coins for a ${tier.toUpperCase()} Pack.);
+save.coins -= cost;
+const allUnlockables = [
+...ITEMS.bats.slice(1), ...ITEMS.hats.slice(1, 4),
+...ITEMS.drip.slice(1), ...ITEMS.jerseys.slice(1), ...ITEMS.abilities.slice(1)
+];
+const locked = allUnlockables.filter(x => !save.owned.includes(x.id));
+if (locked.length === 0) {
+save.coins += Math.floor(cost * 0.8);
+persist();
+return showModal('DUPLICATE REFUND!', 'You already own every item! Refunded 80% of your coins.');
+}
+const pick = locked[Math.floor(Math.random() * locked.length)];
+save.owned.push(pick.id);
+persist();
+showModal(🎉 ${tier.toUpperCase()} PACK OPENED!, You pulled: ${pick.name}! Go equip it in your Locker.);
+}
+const SEASON_TIERS = Array.from({ length: 20 }, (_, i) => {
+const t = i + 1;
+return {
+tier: t,
+free: t % 5 === 0 ? { label: '🥈 Silver Pack (+150 💰)', type: 'pack' } : { label: +${t * 25} Coins, type: 'coins', val: t * 25 },
+vip: t === 20 ? { label: '👑 Royal Crown', type: 'item', id: 'hat_crown' } :
+t === 10 ? { label: '⚡ Lightning Bat', type: 'item', id: 'bat_bolt' } :
+t === 5 ? { label: '🧲 Magnet Bat Ability', type: 'item', id: 'ab_magnet' } :
+{ label: +${t * 50} VIP Coins, type: 'coins', val: t * 50 }
+};
+});
+function openSeason() {
+showScreen('season');
+const lvl = Math.min(20, Math.floor(save.xp / 100) + 1);
+document.getElementById('sp-lvl').textContent = lvl;
+document.getElementById('sp-bar').style.width = (lvl === 20 ? 100 : (save.xp % 100)) + '%';
+document.getElementById('vip-buy-btn').style.display = save.vip ? 'none' : 'inline-block';
+const list = document.getElementById('tier-list');
+list.innerHTML = '';
+SEASON_TIERS.forEach(st => {
+const unlocked = lvl >= st.tier;
+const freeClaimed = save.claimedFree.includes(st.tier);
+const vipClaimed = save.claimedVip.includes(st.tier);
+const row = document.createElement('div');
+row.className = 'tier-row' + (unlocked ? ' unlocked' : '');
+row.innerHTML = <div><b>TIER ${st.tier}</b></div> <div> <div style="color:#9ca3af;">FREE: ${st.free.label}</div> ${freeClaimed ?Claimed ✓: unlocked ?CLAIM:🔒} </div> <div> <div style="color:#fbbf24;">VIP: ${st.vip.label}</div> ${!save.vip ? VIP Locked: vipClaimed ?Claimed ✓: unlocked ?CLAIM VIP:🔒} </div> ;
+list.appendChild(row);
+});
+}
+function buyVIP() {
+if (save.coins < 600) return showModal('NEED 600 COINS', 'Play Ranked matches or redeem secret codes to get 600 coins!');
+save.coins -= 600;
+save.vip = true;
+persist();
+openSeason();
+showModal('👑 VIP PASS UNLOCKED!', 'You can now claim every VIP reward up to the Tier 20 Royal Crown!');
+}
+function claimTier(tier, isVip) {
+const st = SEASON_TIERS[tier - 1];
+const reward = isVip ? st.vip : st.free;
+if (isVip) save.claimedVip.push(tier);
+else save.claimedFree.push(tier);
+if (reward.type === 'coins') save.coins += reward.val;
+else if (reward.type === 'item' && !save.owned.includes(reward.id)) save.owned.push(reward.id);
+else if (reward.type === 'pack') { save.coins += 150; }
+persist();
+openSeason();
+showModal('TIER REWARD CLAIMED!', You unlocked: ${reward.label});
+}
+function redeemCode() {
+const code = document.getElementById('code-input').value.trim().toUpperCase();
+const valid = { LAUNCH: 200, BUCKETS: 300, VIP2026: 500 };
+if (!valid[code]) return showModal('INVALID CODE', 'Try LAUNCH, BUCKETS, or VIP2026.');
+if (save.codes.includes(code)) return showModal('ALREADY REDEEMED', 'You already claimed that code!');
+save.codes.push(code);
+save.coins += valid[code];
+persist();
+showModal('🎁 CODE REDEEMED!', +${valid[code]} Coins added to your account!);
+}
+/* ================= RANKED QUEUE & FRIENDLY 1V1 (PEERJS) ================= */
+let peer = null, conn = null, isHost = false, friendEquip = null, queueTimer = null;
+function startRankedQueue() {
+showScreen('ranked');
+document.getElementById('q-rank').textContent = getRankName(save.rp);
+document.getElementById('ranked-status').textContent = 'Searching ranked matchmaking pool...';
+// Try joining public ranked slot 1, else host slot 1
+peer = new Peer();
+peer.on('open', () => {
+const tryConn = peer.connect('dinger_ranked_lobby_1');
+let connected = false;
+tryConn.on('open', () => {
+connected = true;
+conn = tryConn;
+isHost = false;
+setupConn('ranked_online');
+});
+setTimeout(() => {
+if (!connected) {
+tryConn.close();
+peer.destroy();
+peer = new Peer('dinger_ranked_lobby_1');
+isHost = true;
+peer.on('connection', c => {
+clearTimeout(queueTimer);
+conn = c;
+setupConn('ranked_online');
+});
+// Auto-match with a Ranked Rival CPU after 5 seconds if no real player is online
+queueTimer = setTimeout(launchRankedRival, 5000);
+}
+}, 1500);
+});
+}
+function launchRankedRival() {
+clearTimeout(queueTimer);
+if (peer) { peer.destroy(); peer = null; conn = null; }
+const rivals = [
+{ name: 'RIVAL ACE', equip: { jerseys: 'jer_red', hats: 'hat_red', drip: 'drip_shades', bats: 'bat_alum' } },
+{ name: 'RIVAL SLUGGER', equip: { jerseys: 'jer_black', hats: 'hat_black', drip: 'drip_chain', bats: 'bat_gold' } },
+{ name: 'RIVAL DEMON', equip: { jerseys: 'jer_gold', hats: 'hat_crown', drip: 'drip_combo', bats: 'bat_bolt' } }
+];
+const pick = rivals[Math.min(2, Math.floor(save.rp / 250))];
+friendEquip = pick.equip;
+startMatch('ranked_bot', pick.name);
+}
+function hostFriendly() {
+const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+document.getElementById('host-status').textContent = CODE: ${code} (Waiting for friend...);
+isHost = true;
+peer = new Peer('dinger_friend_' + code);
+peer.on('connection', c => {
+conn = c;
+setupConn('friendly_online');
+});
+}
+function joinFriendly() {
+const code = document.getElementById('join-code').value.trim().toUpperCase();
+if (code.length !== 4) return;
+document.getElementById('join-status').textContent = 'Connecting to friend...';
+isHost = false;
+peer = new Peer();
+peer.on('open', () => {
+conn = peer.connect('dinger_friend_' + code);
+setupConn('friendly_online');
+});
+}
+function setupConn(modeName) {
+conn.on('open', () => {
+conn.send({ type: 'hello', equipped: save.equipped });
+startMatch(modeName, 'FRIEND');
+});
+conn.on('data', data => {
+if (data.type === 'hello') friendEquip = data.equipped;
+if (data.type === 'pitch') receiveOnlinePitch(data.pitch);
+if (data.type === 'result') applyTurnResult(data.outcome, data.basesHit, data.msg);
+});
+}
+/* ================= GAMEPLAY ENGINE ================= */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const controls = document.getElementById('game-controls');
+const banner = document.getElementById('banner');
+let g = {};
+function resizeCanvas() {
+canvas.width = canvas.parentElement.clientWidth;
+canvas.height = canvas.parentElement.clientHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+function showBanner(txt, clr = '#fbbf24') {
+banner.textContent = txt;
+banner.style.color = clr;
+banner.style.opacity = '1';
+clearTimeout(banner._t);
+banner._t = setTimeout(() => banner.style.opacity = '0', 1300);
+}
+function startMatch(mode, oppName = 'CPU') {
+showScreen('game');
+g = {
+mode, // 'ranked_bot', 'ranked_online', 'friendly_online', 'derby'
+oppName,
+active: true,
+inning: 1,
+half: 'TOP',
+outs: 0,
+balls: 0,
+strikes: 0,
+p1Score: 0,
+p2Score: 0,
+bases: [false, false, false],
+pitch: null,
+hitBall: null,
+swingAnim: 0,
+abilityUsedThisInning: false,
+abilityActive: null
+};
+updateGameHUD();
+setupTurn();
+}
+function isOnlineMode() {
+return g.mode === 'ranked_online' || g.mode === 'friendly_online';
+}
+function isRankedMode() {
+return g.mode === 'ranked_bot' || g.mode === 'ranked_online';
+}
+function isUserBatting() {
+if (g.mode === 'derby') return true;
+if (!isOnlineMode()) return g.half === 'TOP';
+return (isHost && g.half === 'TOP') || (!isHost && g.half === 'BOT');
+}
+function updateGameHUD() {
+if (g.mode === 'derby') {
+document.getElementById('hud-inning').textContent = DERBY · ${10 - g.outs} OUTS LEFT;
+document.getElementById('hud-score').textContent = HOME RUNS: ${g.p1Score};
+document.getElementById('hud-count').textContent = OUTS: ${g.outs}/10;
+} else {
+const tag = isRankedMode() ? '🏆 ' : '🤝 ';
+document.getElementById('hud-inning').textContent = ${tag}${g.half} ${g.inning};
+const p1Label = isOnlineMode() ? 'HOST' : 'YOU';
+const p2Label = isOnlineMode() ? 'GUEST' : g.oppName;
+document.getElementById('hud-score').textContent = ${p1Label} ${g.p1Score} - ${g.p2Score} ${p2Label};
+document.getElementById('hud-count').textContent = ${g.balls}-${g.strikes} | ${g.outs} OUT;
+}
+['b1', 'b2', 'b3'].forEach((id, i) => document.getElementById(id).classList.toggle('on', g.bases[i]));
+}
+function setupTurn() {
+controls.innerHTML = '';
+g.pitch = null;
+g.hitBall = null;
+g.abilityActive = null;
+if (!g.active) return;
+const myAbility = getItem('abilities', save.equipped.abilities);
+if (isUserBatting()) {
+const swing = document.createElement('button');
+swing.id = 'swing-btn';
+swing.textContent = 'SWING (SPACE)';
+swing.onpointerdown = () => triggerSwing();
+controls.appendChild(swing);
+if (myAbility.id !== 'ab_none' && !g.abilityUsedThisInning && ['ab_fire', 'ab_freeze', 'ab_magnet'].includes(myAbility.id)) {
+const abBtn = document.createElement('button');
+abBtn.id = 'ability-btn';
+abBtn.textContent = USE ${myAbility.name};
+abBtn.onclick = () => {
+g.abilityUsedThisInning = true;
+g.abilityActive = myAbility.id;
+abBtn.disabled = true;
+showBanner(${myAbility.name} ACTIVATED!, '#c084fc');
+if (g.pitch && myAbility.id === 'ab_freeze') g.pitch.speed *= 0.65;
+};
+controls.appendChild(abBtn);
+}
+if (!isOnlineMode()) {
+setTimeout(throwCpuPitch, 1000);
+} else {
+showBanner('WAITING FOR OPPONENT PITCH...', '#93c5fd');
+}
+} else {
+const pitches = [
+{ name: '🔥 FASTBALL', speed: 0.021, curve: 0 },
+{ name: '🌀 CURVE', speed: 0.015, curve: 52 },
+{ name: '⚡ SLIDER', speed: 0.018, curve: -46 },
+{ name: '🐢 CHANGE', speed: 0.013, curve: 14 }
+];
+pitches.forEach(p => {
+const btn = document.createElement('button');
+btn.className = 'pitch-btn';
+btn.textContent = p.name;
+btn.onclick = () => throwUserPitch(p);
+controls.appendChild(btn);
+});
+if (myAbility.id === 'ab_gas' && !g.abilityUsedThisInning) {
+const abBtn = document.createElement('button');
+abBtn.id = 'ability-btn';
+abBtn.textContent = '⚡ 105 MPH GAS';
+abBtn.onclick = () => {
+g.abilityUsedThisInning = true;
+abBtn.disabled = true;
+throwUserPitch({ name: '105 GAS', speed: 0.032, curve: 0 });
+};
+controls.appendChild(abBtn);
+}
+}
+}
+function throwCpuPitch() {
+if (!g.active || !isUserBatting()) return;
+const types = [
+{ speed: 0.019, curve: 0 },
+{ speed: 0.014, curve: 48 },
+{ speed: 0.017, curve: -44 }
+];
+const pick = types[Math.floor(Math.random() * types.length)];
+const isStrike = g.mode === 'derby' ? true : Math.random() < 0.76;
+g.pitch = {
+t: 0,
+speed: g.abilityActive === 'ab_freeze' ? pick.speed * 0.65 : pick.speed,
+curve: pick.curve,
+tx: isStrike ? (Math.random() * 56 - 28) : (Math.random() > 0.5 ? 92 : -92),
+ty: isStrike ? (Math.random() * 46 - 23) : 72,
+isStrike,
+swung: false
+};
+}
+function throwUserPitch(p) {
+if (g.pitch) return;
+controls.innerHTML = '';
+const isStrike = Math.random() < 0.8;
+const pitchObj = {
+t: 0,
+speed: p.speed,
+curve: p.curve,
+tx: isStrike ? (Math.random() * 52 - 26) : 88,
+ty: isStrike ? (Math.random() * 44 - 22) : 70,
+isStrike,
+swung: false
+};
+g.pitch = pitchObj;
+if (isOnlineMode() && conn) conn.send({ type: 'pitch', pitch: pitchObj });
+}
+function receiveOnlinePitch(p) {
+g.pitch = { ...p, t: 0, swung: false };
+if (g.abilityActive === 'ab_freeze') g.pitch.speed *= 0.65;
+}
+function triggerSwing() {
+if (!isUserBatting() || g.swingAnim > 0) return;
+g.swingAnim = 1;
+tone(190, 'triangle', 0.12);
+if (!g.pitch || g.pitch.swung) return;
+g.pitch.swung = true;
+const batBonus = { bat_wood: 0, bat_alum: 0.008, bat_gold: 0.015, bat_neon: 0.02, bat_bolt: 0.025 }[save.equipped.bats] || 0;
+const fireBonus = g.abilityActive === 'ab_fire' ? 0.045 : 0;
+const perfectWindow = 0.055 + batBonus + fireBonus;
+const diff = Math.abs(g.pitch.t - 0.92);
+if (diff < perfectWindow || (diff < 0.13 && g.abilityActive === 'ab_magnet')) {
+const dist = Math.floor(395 + Math.random() * 95);
+tone(540, 'square', 0.35, 0.25);
+launchBall(true);
+finishSwing('hit', 4, 💥 HOME RUN! ${dist} FT!);
+} else if (diff < 0.135 && g.mode !== 'derby') {
+const basesHit = Math.random() < 0.35 ? 2 : 1;
+tone(340, 'triangle', 0.2);
+launchBall(false);
+finishSwing('hit', basesHit, basesHit === 2 ? '🔥 DOUBLE!' : '⚾ BASE HIT!');
+} else {
+finishSwing('strike', 0, 'SWING & MISS!');
+}
+}
+function finishSwing(outcome, basesHit, msg) {
+if (isOnlineMode() && conn) conn.send({ type: 'result', outcome, basesHit, msg });
+applyTurnResult(outcome, basesHit, msg);
+}
+function applyTurnResult(outcome, basesHit, msg) {
+g.pitch = null;
+if (g.mode === 'derby') {
+if (outcome === 'hit' && basesHit === 4) {
+g.p1Score++;
+save.coins += 15;
+save.xp += 15;
+persist();
+showBanner(${msg} (+15 💰), '#10b981');
+} else {
+g.outs++;
+tone(130, 'sawtooth', 0.2);
+showBanner(OUT! (${10 - g.outs} LEFT), '#ef4444');
+}
+updateGameHUD();
+if (g.outs >= 10) return endMatch();
+setTimeout(setupTurn, 1200);
+return;
+}
+if (outcome === 'hit') {
+g.balls = 0; g.strikes = 0;
+let runs = 0;
+let nb = [false, false, false];
+for (let i = 2; i >= 0; i--) {
+if (g.bases[i]) {
+if (i + basesHit >= 3) runs++;
+else nb[i + basesHit] = true;
+}
+}
+if (basesHit >= 4) runs++;
+else nb[basesHit - 1] = true;
+g.bases = nb;
+if (g.half === 'TOP') g.p1Score += runs;
+else g.p2Score += runs;
+if (isUserBatting()) {
+save.coins += basesHit === 4 ? 25 : 8;
+save.xp += basesHit === 4 ? 25 : 10;
+persist();
+}
+showBanner(msg, basesHit === 4 ? '#10b981' : '#fbbf24');
+updateGameHUD();
+setTimeout(setupTurn, 1300);
+} else if (outcome === 'strike') {
+g.strikes++;
+tone(130, 'sawtooth', 0.2);
+if (g.strikes >= 3) {
+showBanner('⚾ STRIKEOUT!', '#ef4444');
+if (!isUserBatting()) { save.coins += 10; save.xp += 15; persist(); }
+recordOut();
+} else {
+showBanner(${msg} (${g.balls}-${g.strikes}), '#f87171');
+updateGameHUD();
+setTimeout(setupTurn, 1000);
+}
+} else if (outcome === 'ball') {
+g.balls++;
+if (g.balls >= 4) {
+showBanner('🚶 WALK!', '#60a5fa');
+applyTurnResult('hit', 1, 'WALK');
+} else {
+showBanner(BALL (${g.balls}-${g.strikes}), '#93c5fd');
+updateGameHUD();
+setTimeout(setupTurn, 1000);
+}
+}
+}
+function recordOut() {
+g.balls = 0; g.strikes = 0; g.outs++;
+if (g.outs >= 3) {
+g.outs = 0;
+g.bases = [false, false, false];
+g.abilityUsedThisInning = false;
+if (g.half === 'TOP') {
+g.half = 'BOT';
+showBanner('🔄 SWITCH SIDES!', '#fbbf24');
+} else {
+if (g.inning >= 3 && g.p1Score !== g.p2Score) return endMatch();
+g.inning++;
+g.half = 'TOP';
+showBanner(⚾ INNING ${g.inning}!, '#fbbf24');
+}
+}
+updateGameHUD();
+setTimeout(setupTurn, 1350);
+}
+function endMatch() {
+g.active = false;
+if (g.mode === 'derby') {
+const bonus = g.p1Score * 10;
+save.coins += bonus;
+save.xp += g.p1Score * 15;
+persist();
+showScreen('menu');
+return showModal('🔥 DERBY COMPLETE!', You hit ${g.p1Score} Home Runs and earned +${bonus} Bonus Coins!);
+}
+const userWon = isOnlineMode() ? (isHost ? g.p1Score > g.p2Score : g.p2Score > g.p1Score) : g.p1Score > g.p2Score;
+let rpChangeTxt = '';
+if (isRankedMode()) {
+const delta = userWon ? 25 : -12;
+save.rp = Math.max(0, save.rp + delta);
+rpChangeTxt = \nRanked RP: ${delta > 0 ? '+' + delta : delta} RP (${getRankName(save.rp)});
+}
+if (userWon) { save.coins += 60; save.xp += 60; }
+else { save.coins += 15; save.xp += 20; }
+persist();
+leaveToMenu();
+showModal(userWon ? '🏆 VICTORY! (+60 💰)' : '⚾ GOOD GAME! (+15 💰)', Final Score: ${g.p1Score} - ${g.p2Score}${rpChangeTxt});
+}
+function launchBall(isHR) {
+g.hitBall = { x: canvas.width / 2, y: canvas.height * 0.72, vx: (Math.random() - 0.5) * 6, vy: isHR ? -14 : -9, size: 10 };
+}
+window.addEventListener('keydown', e => {
+if (e.code === 'Space' && document.getElementById('screen-game').classList.contains('active')) {
+e.preventDefault();
+triggerSwing();
+}
+});
+/* ================= 2.5D RENDER LOOP WITH DRIP ================= */
+function drawPlayer(x, y, scale, equip, swingAngle = 0) {
+const jer = getItem('jerseys', equip.jerseys);
+const hat = getItem('hats', equip.hats);
+const drip = getItem('drip', equip.drip);
+const bat = getItem('bats', equip.bats);
+ctx.save();
+ctx.translate(x, y);
+ctx.scale(scale, scale);
+ctx.fillStyle = jer.color;
+ctx.fillRect(-15, -55, 30, 62);
+if (drip.chain) {
+ctx.strokeStyle = '#e0f2fe';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.arc(0, -48, 9, 0.15 * Math.PI, 0.85 * Math.PI);
+ctx.stroke();
+}
+ctx.fillStyle = '#fde68a';
+ctx.beginPath();
+ctx.arc(0, -68, 12, 0, Math.PI * 2);
+ctx.fill();
+if (drip.shades) {
+ctx.fillStyle = '#06b6d4';
+ctx.fillRect(-10, -72, 20, 6);
+ctx.strokeStyle = '#f43f5e';
+ctx.lineWidth = 1.5;
+ctx.strokeRect(-10, -72, 20, 6);
+}
+if (hat.id === 'hat_crown') {
+ctx.fillStyle = '#fbbf24';
+ctx.beginPath();
+ctx.moveTo(-11, -78); ctx.lineTo(-11, -88); ctx.lineTo(-4, -82);
+ctx.lineTo(0, -90); ctx.lineTo(4, -82); ctx.lineTo(11, -88); ctx.lineTo(11, -78);
+ctx.fill();
+} else if (hat.color) {
+ctx.fillStyle = hat.color;
+ctx.fillRect(-12, -82, 24, 8);
+ctx.fillRect(-12, -77, 30, 3);
+}
+if (swingAngle !== null) {
+ctx.save();
+ctx.translate(10, -35);
+ctx.rotate(swingAngle);
+if (bat.trail && g.swingAnim > 0.2) {
+ctx.fillStyle = bat.trail;
+ctx.globalAlpha = 0.35;
+ctx.fillRect(0, -14, 72, 24);
+ctx.globalAlpha = 1;
+}
+ctx.fillStyle = bat.color;
+ctx.fillRect(0, -5, 70, 8);
+ctx.restore();
+}
+ctx.restore();
+}
+function loop() {
+const w = canvas.width;
+const h = canvas.height;
+ctx.clearRect(0, 0, w, h);
+ctx.fillStyle = '#0f172a';
+ctx.fillRect(0, 0, w, h * 0.42);
+ctx.fillStyle = '#1e3a8a';
+ctx.fillRect(0, h * 0.34, w, h * 0.08);
+ctx.fillStyle = '#15803d';
+ctx.fillRect(0, h * 0.42, w, h * 0.58);
+ctx.fillStyle = '#92400e';
+ctx.beginPath();
+ctx.moveTo(w * 0.14, h); ctx.lineTo(w * 0.5, h * 0.48); ctx.lineTo(w * 0.86, h);
+ctx.fill();
+ctx.fillStyle = '#b45309';
+ctx.beginPath();
+ctx.ellipse(w * 0.5, h * 0.54, 48, 16, 0, 0, Math.PI * 2);
+ctx.fill();
+const defaultOpp = { jerseys: 'jer_red', hats: 'hat_red', drip: 'drip_none', bats: 'bat_wood' };
+const pitcherEquip = isUserBatting() ? (friendEquip || defaultOpp) : save.equipped;
+const batterEquip = isUserBatting() ? save.equipped : (friendEquip || defaultOpp);
+drawPlayer(w * 0.5, h * 0.53, 0.58, pitcherEquip, null);
+if (g.swingAnim > 0) g.swingAnim = Math.max(0, g.swingAnim - 0.08);
+const swingAng = -0.65 + (1 - g.swingAnim) * 2.15;
+drawPlayer(w * 0.5 - 88, h * 0.78, 1.05, batterEquip, swingAng);
+const zw = 112, zh = 122;
+const zx = w * 0.5 - zw / 2, zy = h * 0.66 - zh / 2;
+ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+ctx.lineWidth = 3;
+ctx.strokeRect(zx, zy, zw, zh);
+ctx.strokeStyle = g.abilityActive === 'ab_fire' ? 'rgba(239,68,68,0.6)' : 'rgba(16,185,129,0.35)';
+ctx.strokeRect(zx + 14, zy + 18, zw - 28, zh - 36);
+if (g.pitch) {
+const p = g.pitch;
+p.t += p.speed;
+const sx = w * 0.5, sy = h * 0.47;
+const ex = w * 0.5 + p.tx, ey = h * 0.66 + p.ty;
+const bx = sx + (ex - sx) * p.t + Math.sin(p.t * Math.PI) * p.curve;
+const by = sy + (ey - sy) * p.t;
+const r = 4 + p.t * 11;
+ctx.fillStyle = p.speed > 0.028 ? '#f97316' : '#ffffff';
+ctx.beginPath();
+ctx.arc(bx, by, r, 0, Math.PI * 2);
+ctx.fill();
+if (!isOnlineMode() && !isUserBatting() && p.t >= 0.92 && !p.swung) {
+p.swung = true;
+if (p.isStrike && p.speed < 0.028 && Math.random() < 0.24) {
+launchBall(false);
+applyTurnResult('hit', 1, 'RIVAL BASE HIT!');
+} else if (p.isStrike) {
+applyTurnResult('strike', 0, 'STRIKE!');
+} else {
+applyTurnResult('ball', 0, 'BALL');
+}
+}
+if (isUserBatting() && p.t >= 1.05 && !p.swung) {
+finishSwing(p.isStrike ? 'strike' : 'ball', 0, p.isStrike ? 'CALLED STRIKE!' : 'BALL');
+}
+}
+if (g.hitBall) {
+const hb = g.hitBall;
+hb.x += hb.vx; hb.y += hb.vy;
+hb.size = Math.max(2, hb.size - 0.15);
+ctx.fillStyle = '#fff';
+ctx.beginPath();
+ctx.arc(hb.x, hb.y, hb.size, 0, Math.PI * 2);
+ctx.fill();
+}
+requestAnimationFrame(loop);
+}
+loop();
