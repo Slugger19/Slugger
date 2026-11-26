@@ -11,6 +11,7 @@
   <div id="topbar">
     <div class="pill-group">
       <button class="btn-dark" style="padding:5px 10px;font-size:12px;" onclick="leaveToMenu()">🏠 MENU</button>
+      <div class="pill" style="cursor:pointer;" onclick="changeName()">👤 <span id="top-name">SLUGGER</span> ✎</div>
       <div class="pill rank-clr">🏆 <span id="top-rank">ROOKIE</span> (<span id="top-rp">0</span> RP)</div>
       <div class="pill xp-clr">🎟 LVL <span id="top-lvl">1</span></div>
     </div>
@@ -26,7 +27,7 @@
       </div>
     </div>
     <div class="grid-2">
-      <div class="card"><h3>🏆 RANKED LADDER</h3><p>Climb from Rookie to Hall of Fame (+25 RP per win).</p><button class="btn-pink" onclick="startRankedQueue()">FIND RANKED</button></div>
+      <div class="card"><h3>🏆 RANKED & TOP 25</h3><p>Climb the ladder & view the Top 25 RP Leaderboard.</p><div class="pill-group"><button class="btn-pink" style="flex:1;" onclick="startRankedQueue()">PLAY RANKED</button><button class="btn-dark" style="flex:1;" onclick="openLeaderboard()">📊 TOP 25</button></div></div>
       <div class="card"><h3>🤝 FRIENDLY 1V1</h3><p>Unranked private 4-letter room code match.</p><button class="btn-blue" onclick="showScreen('friendly')">FRIENDLY LOBBY</button></div>
       <div class="card"><h3>🎟 SEASON PASS</h3><p>20 Tiers of Coins, Abilities & Tier 20 Royal Crown.</p><button class="btn-purple" onclick="openSeason()">SEASON PASS</button></div>
       <div class="card"><h3>🎒 LOCKER & 🛍 SHOP</h3><p>Equip Bats, Drip, Abilities & open Card Packs.</p><div class="pill-group"><button class="btn-dark" style="flex:1;" onclick="openLocker('bats')">LOCKER</button><button class="btn-gold" style="flex:1;" onclick="openShop()">SHOP</button></div></div>
@@ -36,7 +37,8 @@
       <div class="pill-group"><input id="code-input" placeholder="CODE" maxlength="10" /><button class="btn-green" onclick="redeemCode()">REDEEM</button></div>
     </div>
   </div>
-  <div id="screen-ranked" class="screen"><div class="card" style="text-align:center;padding:30px;align-items:center;"><h2 style="color:#f472b6;">🏆 RANKED QUEUE</h2><p id="ranked-status">Searching near <b id="q-rank">ROOKIE</b>...</p><div class="pill-group"><button class="btn-pink" onclick="launchRankedRival()">⚡ PLAY RIVAL NOW</button><button class="btn-dark" onclick="leaveToMenu()">CANCEL</button></div></div></div>
+  <div id="screen-ranked" class="screen"><div class="card" style="text-align:center;padding:30px;align-items:center;"><h2 style="color:#f472b6;">🏆 RANKED MATCHMAKING</h2><p id="ranked-status">Searching for players near <b id="q-rank">ROOKIE</b> (15s)...</p><div class="pill-group"><button class="btn-pink" onclick="launchRankedRival()">⚡ PLAY RIVAL NOW</button><button class="btn-dark" onclick="leaveToMenu()">CANCEL</button></div></div></div>
+  <div id="screen-lb" class="screen"><h2>📊 TOP 25 RANKED LEADERBOARD</h2><div id="lb-list" class="tier-list"></div></div>
   <div id="screen-friendly" class="screen"><h2>🤝 FRIENDLY 1V1 (UNRANKED)</h2><div class="grid-2"><div class="card"><h3>1. HOST</h3><button class="btn-green" onclick="hostFriendly()">GET CODE</button><div id="host-status" style="font-size:18px;font-weight:900;color:#fbbf24;"></div></div><div class="card"><h3>2. JOIN</h3><div class="pill-group"><input id="join-code" placeholder="ABCD" maxlength="4" /><button class="btn-blue" onclick="joinFriendly()">JOIN</button></div><div id="join-status"></div></div></div></div>
   <div id="screen-locker" class="screen"><h2>🎒 LOCKER & ABILITIES</h2><div class="tabs"><button class="tab active" onclick="openLocker('bats',this)">🏏 BATS</button><button class="tab" onclick="openLocker('hats',this)">🧢 HATS</button><button class="tab" onclick="openLocker('drip',this)">🕶 DRIP</button><button class="tab" onclick="openLocker('jerseys',this)">👕 JERSEYS</button><button class="tab" onclick="openLocker('abilities',this)">⚡ ABILITIES</button></div><div id="locker-grid" class="grid-3"></div></div>
   <div id="screen-shop" class="screen"><h2>🛍 SHOP & PACKS</h2><div class="grid-3"><div class="card"><h3>🥉 BRONZE PACK</h3><button class="btn-dark" onclick="buyPack('bronze',100)">100 💰</button></div><div class="card"><h3>🥈 SILVER PACK</h3><button class="btn-blue" onclick="buyPack('silver',250)">250 💰</button></div><div class="card"><h3>🥇 GOLD PACK</h3><button class="btn-gold" onclick="buyPack('gold',500)">500 💰</button></div></div><h3>🕒 DAILY ROTATION</h3><div id="daily-shop-grid" class="grid-3"></div></div>
